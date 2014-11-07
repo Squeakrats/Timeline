@@ -194,7 +194,6 @@ var Timeline, Animation;
 
 		return root[0];
 	}
-
 	Animation = function (name, ts, te, gs, ge) {
 		this.name = name;
 		this.range = new TimeInterval(ts, te);
@@ -291,7 +290,6 @@ var Timeline, Animation;
 			}
 
 			elem.on("mousedown", function (e) {
-				console.log("MOUSWDOWN!!!!!!!!");
 				clearInterval(mouseInterval)
 				var last = time, startMouse = null, startMinRange = null;
 				mouseInterval = setInterval(function () {
@@ -302,6 +300,7 @@ var Timeline, Animation;
 						var dt = mouseTime - startMouse;
 						var left = Math.max(self.range.timeStart , (startMinRange + dt));
 						animation.globalRange.setRange(left, left + animation.globalRange.width);
+						if(animation.globalRange.timeEnd > self.range.timeEnd) animation.globalRange.setRange(self.range.timeEnd - animation.globalRange.width, self.range.timeEnd);
 						elem.css("transform", "translate3d(" + (animation.globalRange.timeStart - self.range.timeStart)/self.range.width * 700 + "px,0px,0px)");
 						self.setTimeUnsafe(time);
 					}
@@ -429,7 +428,6 @@ var Timeline, Animation;
 						if(!isNaN(_time)){
 							if(_time > self.range.timeEnd) _time = self.range.timeEnd;
 							if(_time < animation.globalRange.timeStart) _time = animation.globalRange.timeStart;
-							console.log(_time);
 							animation.globalRange.setEnd(_time);
 							elem.css("width", animation.globalRange.width / self.range.width * 700);
 							self.setTimeUnsafe(time);
@@ -486,8 +484,8 @@ var Timeline, Animation;
 		this.bodyElem = createTimelineDOMObject(this);
 		timelineElem = $(this.bodyElem).find(".timelinejs-timeline");
 		popupElem = $(this.bodyElem).find(".timelinejs-popup");
-		localTimeElem = popupElem.find(".localtime");
-		globalTimeElem = popupElem.find(".globaltime");
+		localTimeElem = $(popupElem[0].childNodes[1].childNodes[0]);//idk why
+		globalTimeElem = $(popupElem[0].childNodes[3].childNodes[0]);//idk why. def a bug in my jq hax.
 		var timeMarkerElem = $(this.bodyElem).find(".timelinejs-time-marker");
 		var timeMarkerInputElem = timeMarkerElem.find("input");
 		var timelineElemWidth = 700; // HARD CODED 700 RIGHT HERE. YEA THATS RIGHT BE VERY AFRAID. DO NOT LOSE THIS. SERIOUSLY ITS RIGHT HERE. HARDCODED. YEP 

@@ -1,6 +1,4 @@
-console.log("weee") //wtf why is mah z-indices not working T_T
-
-
+//wtf why is mah z-indices not working T_T
 window.onload = function () {
 	var canvas = document.createElement("canvas");
 		canvas.width =  CANVAS_WIDTH;
