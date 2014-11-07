@@ -2,10 +2,128 @@ var Timeline, Animation;
 (function(){
 	'use-strict'
 
+	var DomElemProto = {};
+
+	//returns first one of that className
+	//depth first search. could be optimized but whatever yolo. 
+	DomElemProto.find = function (selector) {
+		//if(selector === ".timelinejs-play") console.log("this is it!");
+		if(selector.charAt(0) == "."){
+			var className = selector.substring(1, selector.length);
+			var elem = this[0], childNodes = elem.childNodes;
+			for(var i = 0; i < childNodes.length;i++){
+				if(childNodes[i].className){
+					var childElem = createDomElem(childNodes[i]);
+					if(childElem[0].className.indexOf(className) < 0){
+						var find = childElem.find(selector)//this is not effecient in any way. 
+						if(find != null) return find;
+					}else{
+						return childElem;
+					}
+				}
+			}
+		}else{
+			var elem = this[0], childNodes = elem.childNodes;
+			var tagName = selector.toUpperCase();
+			for(var i = 0; i < childNodes.length;i++){
+				var childElem = createDomElem(childNodes[i]);
+				if(childElem[0].tagName != tagName){
+					var find = childElem.find(selector)//this is not effecient in any way. 
+					if(find != null) return find;
+				}else{
+					return childElem;
+				}
+			}
+		}
+		
+		return null;
+	}
+
+	//adds an eventListener to a DOMelement 
+	DomElemProto.on = function (eventNames, callback) {
+		var eventArray = eventNames.split(" ");
+		var self = this;
+		var elem = this[0];
+		eventArray.forEach(function(event) {
+			if(self.events[event] === undefined) self.events[event] = [];
+			self.events[event].push(callback);
+			elem.addEventListener(event, callback);
+		});
+	}
+
+	//removes all of a specific callback. 
+	DomElemProto.off = function (eventName) {
+		var self = this;
+		var elem = this[0]
+		if(self.events[eventName] === undefined) self.events[eventName] = [];
+		self.events[eventName].forEach(function(callback){
+			elem.removeEventListener(eventName, callback);
+		})
+	}
+
+	DomElemProto.append = function (child) {
+		if(child.tagName){
+			this[0].appendChild(child);
+		}else{
+			this[0].appendChild(child[0]);	
+		}
+	}
+
+	DomElemProto.css = function (name, value) {
+		this[0].style[name] = value;
+		return this;
+	}
+
+	DomElemProto.attr = function (name, value) {
+		if(arguments.length == 2) this[0].setAttribute(name, value)
+
+		return this[0].getAttribute(name);
+	}
+
+	DomElemProto.offset = function () {
+		return this[0].getBoundingClientRect();
+	}
+	DomElemProto.val = function (value) {
+		if(arguments.length) this[0].value = value;
+		return this[0].value;
+	}
+
+	DomElemProto.removeClass = function (className) {
+		///\bMyClass\b/ from http://stackoverflow.com/questions/2155737/remove-css-class-from-element-with-javascript-no-jquery 
+		//because seriously who remembers how do regex.
+		this[0].className = this[0].className.replace( new RegExp("\\b" + className + "\\b"), "");
+	}
+
+	DomElemProto.addClass = function (className) {
+		this[0].className += " " + className;
+	}
+
+	var createDomElem = function (elem) {
+		var out = []
+			out[0] = elem;
+			out.events = {};
+		out.__proto__ = DomElemProto;
+		return out;
+	}
+	var $ = function (selector) {
+		if(selector.tagName){
+			return createDomElem( selector );
+		}else{
+			if(typeof selector === "string"){
+				console.log("String!")
+			}
+			if(selector.charAt(0) == '.'){
+				return createDomElem( document.getElementByClass(selector.substring(1, substring.length)) );
+			}else{
+				console.log('do this');
+			}
+		}
+	}
+
 	var createTimelineDOMObject = function (timeline) {
 		var root = document.createElement("div");
 			root.className = "timelinejs-root"
-			root.innerHTML = "<div class='timelinejs-menu'><div class='timelinejs-controls'><input class = 'timelinejs-control timelinejs-speed' value='1' /><div class='timelinejs-control timelinejs-play'></div><div class='timelinejs-control timelinejs-loop'></div></div><div class='timelinejs-timeline'><div class='timelinejs-time-marker'><input type = 'text' value = '0'><div class='timelinejs-vertical-time-marker'></div></div></div></div><div class='timelinejs-display'><div class='timelinejs-details'></div><div class='timelinejs-popup'><div> Local Time </div><div><input></div><div> Global Time </div><div><input></div></div></div>";
+			root.innerHTML = "<div class='timelinejs-menu'><div class='timelinejs-controls'><input class = 'timelinejs-control timelinejs-speed' value='1' /><div class='timelinejs-control timelinejs-play'></div><div class='timelinejs-control timelinejs-loop'></div></div><div class='timelinejs-timeline'><div class='timelinejs-time-marker'><input type = 'text' value = '0'><div class='timelinejs-vertical-time-marker'></div></div></div></div><div class='timelinejs-display'><div class='timelinejs-details'></div><div class='timelinejs-popup'><div> Local Time </div><div><input class='localtime'></div><div> Global Time </div><div><input class='globaltime' ></div></div></div>";
 		
 		var root  = $(root),
 			menuElem  = root.find(".timelinejs-menu"),
@@ -21,7 +139,7 @@ var Timeline, Animation;
 			popupElem.on('click mousedown', function (e) { e.stopPropagation(); })
 			timeMarkerInputElem.on('click mousedown', function (e) { e.stopPropagation(); })
 
-			timeMarkerInputElem.keypress(function(e){
+			timeMarkerInputElem.on("keypress", function(e){
 				if(e.keyCode != 13) return;
 				var time = parseFloat($(this).val());
 				if(!isNaN(time)) timeline.setTimeUnsafe(time);
@@ -69,7 +187,7 @@ var Timeline, Animation;
 				root.off("mousemove");
 			});
 
-			root.mouseleave(function(e){
+			root.on("mouseleave", function(e){
 				clearInterval(interval);
 				root.off("mousemove");
 			});
@@ -114,7 +232,7 @@ var Timeline, Animation;
 		this.range = new TimeInterval(ts, te);
 		this.mode = "aimationframe";
 		this.bodyElem = undefined;
-		var timelineElem, popupElem;
+		var timelineElem, popupElem, localTimeElem, globalTimeElem;
 		var layers = {};
 
 		var time = 0, timeU = 0, speed = 1, loopTime = 0, intervalTimeout = 17;
@@ -141,16 +259,22 @@ var Timeline, Animation;
 
 		this.addAnimation = function (layerName, animation) {
 			if(layers[layerName] === undefined) {
-				layers[layerName] = { "$$elem" : $("<div class = 'timelinejs-layer-container'><div class='timelinejs-layer-info'><div class='timelinejs-layer-title'><input type = 'text' value = '" +  layerName+ "'></div></div></div>") };
+				var src = "<div class='timelinejs-layer-info'><div class='timelinejs-layer-title'><input type = 'text' value = '" +  layerName+ "'></div></div>";
+				var elem = document.createElement("div");
+					elem.className = "timelinejs-layer-container";
+					elem.innerHTML = src;
+				layers[layerName] = { "$$elem" : $(elem) };
 				$(self.bodyElem).find(".timelinejs-details").append(layers[layerName]["$$elem"]);
 			};
 			layers[layerName][animation.name] = animation;
-			var elem = elem = $("<div class='timelinejs-animation'></div>")
+			var elem = $(document.createElement("div"));//$("<div class='timelinejs-animation'></div>")
+				elem[0].className = "timelinejs-animation";
 			layers[layerName]["$$elem"].append(elem);
 
-
-			var leftHandle = $("<div class='timelinejs-end-point left'></div>");
-			var rightHandle = $("<div class='timelinejs-end-point right'></div>");
+			var leftHandle = $(document.createElement("div"));
+				leftHandle[0].className = "timelinejs-end-point left";
+			var rightHandle = $(document.createElement("div"));
+				rightHandle[0].className = "timelinejs-end-point right";
 			elem.append(leftHandle);
 			elem.append(rightHandle);
 			
@@ -167,6 +291,7 @@ var Timeline, Animation;
 			}
 
 			elem.on("mousedown", function (e) {
+				console.log("MOUSWDOWN!!!!!!!!");
 				clearInterval(mouseInterval)
 				var last = time, startMouse = null, startMinRange = null;
 				mouseInterval = setInterval(function () {
@@ -248,23 +373,23 @@ var Timeline, Animation;
 			///////////////////////
 			//$(self.bodyElem).append($(".popup"));
 			leftHandle.attr("oncontextmenu", "return false");
-			leftHandle.mousedown(function(e){
+			leftHandle.on("mousedown", function(e){
 				if(e.which == 3){
 					popupElem.addClass("open");
 					var origin = $(self.bodyElem).offset();
 					popupElem.css('left', e.pageX - origin.left - 50).css("top", e.pageY - origin.top - 100);
-					var inputs = popupElem.find("input")
-					inputs.off("keypress");
-					$(inputs[0]).val(animation.range.timeStart);
-					$(inputs[1]).val(animation.globalRange.timeStart);
-					$(inputs[0]).keypress(function(e){
+					localTimeElem.off("keypress")
+					globalTimeElem.off("keypress")
+					localTimeElem.val(animation.range.timeStart);
+					globalTimeElem.val(animation.globalRange.timeStart);
+					localTimeElem.on("keypress", function(e){
 						if(e.keyCode != 13) return;
 						var _time = parseFloat($(this).val());
 						animation.range.setStart(_time);
 						self.setTimeUnsafe(time)
 					})
 
-					$(inputs[1]).keypress(function(e){
+					globalTimeElem.on("keypress", function(e){
 						if(e.keyCode != 13) return;
 						var _time = parseFloat($(this).val());
 						if(!isNaN(_time)){
@@ -281,23 +406,24 @@ var Timeline, Animation;
 			})
 
 			rightHandle.attr("oncontextmenu", "return false");
-			rightHandle.mousedown(function(e){
+			rightHandle.on("mousedown", function(e){
 				if(e.which == 3){
 					popupElem.addClass("open");
 					var origin = $(self.bodyElem).offset();
 					popupElem.css('left', e.pageX - origin.left - 50).css("top", e.pageY - origin.top - 100);
-					var inputs = popupElem.find("input")
-					inputs.off("keypress");
-					$(inputs[0]).val(animation.range.timeEnd);
-					$(inputs[1]).val(animation.globalRange.timeEnd);
-					$(inputs[0]).keypress(function(e){
+
+					localTimeElem.off("keypress")
+					globalTimeElem.off("keypress")
+					localTimeElem.val(animation.range.timeEnd);
+					globalTimeElem.val(animation.globalRange.timeEnd);
+					localTimeElem.on("keypress", function(e){
 						if(e.keyCode != 13) return;
 						var _time = parseFloat($(this).val());
 						animation.range.setEnd(_time);
 						self.setTimeUnsafe(time)
 					})
 
-					$(inputs[1]).keypress(function(e){
+					globalTimeElem.on("keypress", function(e){
 						if(e.keyCode != 13) return;
 						var _time = parseFloat($(this).val());
 						if(!isNaN(_time)){
@@ -321,7 +447,7 @@ var Timeline, Animation;
 
 			});
 
-			$(self.bodyElem).mouseleave(function(e){
+			$(self.bodyElem).on("mouseleave", function(e){
 				clearInterval(mouseInterval);
 				$(self.bodyElem).off("mousemove");
 			});
@@ -360,6 +486,8 @@ var Timeline, Animation;
 		this.bodyElem = createTimelineDOMObject(this);
 		timelineElem = $(this.bodyElem).find(".timelinejs-timeline");
 		popupElem = $(this.bodyElem).find(".timelinejs-popup");
+		localTimeElem = popupElem.find(".localtime");
+		globalTimeElem = popupElem.find(".globaltime");
 		var timeMarkerElem = $(this.bodyElem).find(".timelinejs-time-marker");
 		var timeMarkerInputElem = timeMarkerElem.find("input");
 		var timelineElemWidth = 700; // HARD CODED 700 RIGHT HERE. YEA THATS RIGHT BE VERY AFRAID. DO NOT LOSE THIS. SERIOUSLY ITS RIGHT HERE. HARDCODED. YEP 

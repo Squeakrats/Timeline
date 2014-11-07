@@ -1,18 +1,18 @@
 console.log("weee") //wtf why is mah z-indices not working T_T
-$(document).ready(function() {
-	var canvas = $("<canvas></canvas>");
-		canvas.attr("width", CANVAS_WIDTH);
-		canvas.attr("height", CANVAS_HEIGHT);
-	$("body").append(canvas);
-	var ctx = canvas[0].getContext('2d');
+
+
+window.onload = function () {
+	var canvas = document.createElement("canvas");
+		canvas.width =  CANVAS_WIDTH;
+		canvas.height =  CANVAS_HEIGHT;
+	document.body.appendChild(canvas);
+	var ctx = canvas.getContext('2d');
 	ctx.fillStyle="rgb(0,0,0)";
 	ctx.fillRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
 
 
-
 	var timeline = new Timeline(0, 10000);
-	$("body").append(timeline.bodyElem);
-	console.log(timeline)
+	document.body.appendChild(timeline.bodyElem);
 
 	//possible interval leaks going on
 	timeline.addAnimation("default", new Animation("PARTICLES", 0, 10000, 5000, 10000) ); 
@@ -29,7 +29,4 @@ $(document).ready(function() {
 		}
 		
 	})
-		
-
-
-})
+}
